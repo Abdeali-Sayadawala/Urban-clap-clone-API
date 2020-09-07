@@ -1,5 +1,5 @@
 //importing modules
-const {User, validate, updateValidate} = require('../models/user');
+const {User, validate, updateValidate, changePassValidate} = require('../models/user');
 const express = require('express');
 const mongoose = require('mongoose');
 const Joi = require('joi');
@@ -27,7 +27,7 @@ router.post('/login', async (req, res) => {
 });
 
 //Logout API
-router.get('/logout', auth, async (req, res) => {
+router.get('/logout', auth(0, ""), async (req, res) => {
 	try{
 		const user = await User.findOne({email: req.user.email});
 		user.token.splice(user.token.indexOf(req.header('x-auth-token')), 1);
@@ -40,7 +40,7 @@ router.get('/logout', auth, async (req, res) => {
 })
 
 //Profile API
-router.get('/profile', auth, async (req, res) => {
+router.get('/profile', auth(0, ""), async (req, res) => {
 	const user = await User.findOne({email: req.user.email}).select("-password -token -is_deleted");
 	res.send(user);
 
@@ -49,8 +49,13 @@ router.get('/profile', auth, async (req, res) => {
 //Add User API
 router.post('/addUser', async (req, res) => {
 	//joi validate the input
-	let validation = validate(req.body);
-	if (validation) return res.status(400).send(validation.error.details[0].message);
+	let {validation, error} = validate(req.body);
+	if (error) {
+		if (error.details[0].type == 'string.min') return res.status(400).send("Please enter number greater than 10");
+		if (error.details[0].type == 'string.max') return res.status(400).send("Please enter number less than 11");
+		else return res.status(400).send(error.details[0].message);
+	};
+	if (!Number(req.body.phone)) return res.status(400).send("Please enter valid number");
 	if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(req.body.email)) return res.status(400).send("Email invalid!");
 
 	//find if email already exists
@@ -70,40 +75,72 @@ router.post('/addUser', async (req, res) => {
 		password: req.body.password,
 		user_type: req.body.user_type,
 	});
-	console.log("check")
 	try{
 		user = await user.save();
 		res.send(user);
 	}catch(err){
 		res.status(501).send(err.errors[Object.keys(err.errors)[0]].message);
 	}
-	
 });
 
 //Update User API
-router.put('/updateUser', auth, async (req, res) => {
-	let validation = updateValidate(req.body);
-	console.log(validation)
-	if (validation) return res.status(400).send(validation.error.details[0].message);
-	if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(req.body.email)) return res.status(400).send("Email invalid!");
+router.put('/updateUser', auth(0, ""), async (req, res) => {
+	let {validation, error} = updateValidate(req.body);
+	if (error) {
+		if (error.details[0].type == 'string.min') return res.status(400).send("Please enter number greater than 10");
+		if (error.details[0].type == 'string.max') return res.status(400).send("Please enter number less than 11");
+		else return res.status(400).send(error.details[0].message);
+	};
+	if (req.body.phone && !Number(req.body.phone)) return res.status(400).send("Please enter valid number");
+	if (req.body.email && !/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(req.body.email)) return res.status(400).send("Email invalid!");
 	try{
 		const user = await User.updateOne({email: req.user.email}, {
-			$set: {
-				name: req.body.name,
-				email: req.body.email,
-				phone: req.body.phone
-			}
+			$set: req.body
 		});
 		return res.send("User properties updated.");
 	}catch(err){
-		res.status(501).send(err);
+		console.log("Error-Update user: "+err);
+		res.status(501).send("Internal server error!");
 	}
-	
-	
 });
 
 //Delete User API
+router.delete('/deleteUser', auth(0, ""), async (req, res) => {
+	try{
+		const user = await User.findOne({email: req.user.email});
+		user.is_deleted = true;
+		user.token = [];
+		await user.save();
+		res.send("deleted");
+	}catch(err){
+		console.log("Error-Delete user: ", err);
+	}
+});
+
 //Change Password API
+router.post('/changePassword', auth(0, ""), async (req, res) => {
+	try{
+		let validation = changePassValidate(req.body);
+		if (validation.error) return res.status(400).send(validation.error.details[0].message);
+
+		if(req.body.new_password==req.body.old_password) return res.status(400).send("old password and new password cannot be same.");
+
+		let user = await User.findOne({email: req.user.email});
+		if(!(user.password == req.body.old_password)) return res.status(400).send("Invalid current password");
+
+		User.updateOne({email: req.user.email},{ $set:{ password: req.body.new_password, token: [] } })
+			.then(() => {
+				res.send("Password Changed");
+			})
+			.catch((err) => {
+				console.log("Error-Change password update: ", err);
+				res.status(500).send("Internal server error");
+			})
+	}catch(err){
+		console.log("Error-Change password: ", err);
+		res.status(500).send("Internal server error");
+	}
+})
 
 function validateLogin(data){
 	let loginSchema = Joi.object({

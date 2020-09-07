@@ -1,9 +1,10 @@
-const joi = require('joi');
+const Joi = require('joi');
 const mongoose = require('mongoose');
 
 const commentSchema = new mongoose.Schema({
 	comment_by:{
 		type:String,
+		enum: { values: ['Customer', 'ServiceProvider'], message: "Select from only two 'Customer' or 'ServiceProvider'"},
 		required:true
 	},
 	comment_text:{
@@ -14,34 +15,50 @@ const commentSchema = new mongoose.Schema({
 
 const applied_schema = new mongoose.Schema({
 	service:{
-		type:Schema.Types.ObjectId,
+		type:mongoose.Schema.Types.ObjectId,
 		ref:'Service',
 		required:true,
 	},
 	applied_by:{
-		type:Schema.Types.ObjectId,
+		type:mongoose.Schema.Types.ObjectId,
 		ref:'User',
 		required:true,
 	},
 	status:{
 		type:String,
-		required:true,
+		enum: {
+			values: ['Pending', 'Accepted', 'Rejected', 'Completed'],
+			message: "Status field can only have 'Pending', 'Accepted', 'Rejected' and 'Completed'"
+		},
+		default:'Pending'
 	},
-	comments:{
+	comments:[{
 		type:commentSchema,
-		required:true,
-	},
+	}],
+	is_deleted:{
+		type: Boolean,
+		default: false
+	}
 });
 
-const AppliedSchema = mongoose.model('AppliedSchema', applied_schema);
+const AppliedService = mongoose.model('AppliedSchema', applied_schema);
 
 function validateComments(comment){
 	let val_com_schema = Joi.object({
-		comment_by: Joi.String().max(255).required(),
-		comment_text: Joi.String().required(),
+		applied_service_id: Joi.string().required(),
+		comment_text: Joi.string().required(),
 	});
 
 	return val_com_schema.validate(comment);
+}
+
+function validateStatus(status){
+	let val_stat_schema = Joi.object({
+		applied_service_id: Joi.string().required(),
+		status: Joi.string().required(),
+	});
+
+	return val_stat_schema.validate(status);
 }
 
 function validateAppliedService(applied_service){
@@ -52,6 +69,7 @@ function validateAppliedService(applied_service){
 	})
 }
 
-exports.AppliedSchema = AppliedSchema;
+exports.AppliedService = AppliedService;
 exports.validateComments = validateComments;
+exports.validateStatus = validateStatus;
 exports.validateAppliedService = validateAppliedService;

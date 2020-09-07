@@ -5,6 +5,8 @@ const cors = require('cors')
 
 //importing routes
 const users = require('./routes/users');
+const services = require('./routes/services');
+const appliedServices = require('./routes/applied_services');
 
 
 //dependencies error
@@ -38,6 +40,8 @@ app.use(express.json());
 
 //express api's
 app.use('/api/users', users);
+app.use('/api/services', services);
+app.use('/api/applied', appliedServices);
 app.get('/',(req, res) => {
 	res.send("Welcome to urban clap api's.");
 });
