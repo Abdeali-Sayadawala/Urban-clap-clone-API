@@ -13,7 +13,7 @@ const commentSchema = new mongoose.Schema({
 	}
 });
 
-const applied_schema = new mongoose.Schema({
+const request_schema = new mongoose.Schema({
 	service:{
 		type:mongoose.Schema.Types.ObjectId,
 		ref:'Service',
@@ -41,25 +41,7 @@ const applied_schema = new mongoose.Schema({
 	}
 });
 
-const AppliedService = mongoose.model('AppliedSchema', applied_schema);
-
-function validateComments(comment){
-	let val_com_schema = Joi.object({
-		applied_service_id: Joi.string().required(),
-		comment_text: Joi.string().required(),
-	});
-
-	return val_com_schema.validate(comment);
-}
-
-function validateStatus(status){
-	let val_stat_schema = Joi.object({
-		applied_service_id: Joi.string().required(),
-		status: Joi.string().required(),
-	});
-
-	return val_stat_schema.validate(status);
-}
+const RequestService = mongoose.model('RequestService', request_schema);
 
 function validateAppliedService(applied_service){
 	let applies_schema = Joi.object({
@@ -69,7 +51,7 @@ function validateAppliedService(applied_service){
 	})
 }
 
-exports.AppliedService = AppliedService;
-exports.validateComments = validateComments;
-exports.validateStatus = validateStatus;
-exports.validateAppliedService = validateAppliedService;
+exports.RequestService = RequestService;
+// exports.validateComments = validateComments;
+// exports.validateStatus = validateStatus;
+// exports.validateAppliedService = validateAppliedService;

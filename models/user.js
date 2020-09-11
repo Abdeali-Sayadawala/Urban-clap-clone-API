@@ -38,52 +38,6 @@ const userSchema = new mongoose.Schema({
 	}
 });
 
-userSchema.methods.generateAuthToken = async function(){
-	try{
-		const token = jwt.sign({_id: this._id, email: this.email}, process.env.privatekey)
-		this.token.push(token);
-		let result = await this.save()
-		return {"status":1, "token":token};
-	}catch(err){
-		return {"status":0, "error":err};
-	}
-}
-
 const User = mongoose.model('User', userSchema);
 
-function validateUser(user){
-	let user_schema = Joi.object({
-		name: Joi.string().max(30).required(),
-		email: Joi.string().email().required(),
-		phone: Joi.string().min(10).max(10).required(),
-		password: Joi.string().min(5).max(255).required(),
-		user_type: Joi.string().required(),
-		is_deleted: Joi.boolean().optional()
-	});
-
-	return user_schema.validate(user);
-}
-
-function updateUserValidate(user){
-	let updateSchema = Joi.object({
-		name: Joi.string().max(30),
-		email: Joi.string().email(),
-		phone: Joi.string().min(10).max(10),
-	});
-
-	return updateSchema.validate(user);
-}
-
-function changePassValidate(user){
-	let changePassSchema = Joi.object({
-		old_password: Joi.string().min(5).max(255).required(),
-		new_password: Joi.string().min(5).max(255).required()
-	});
-
-	return changePassSchema.validate(user);
-}
-
 exports.User = User;
-exports.validate = validateUser;
-exports.updateValidate = updateUserValidate;
-exports.changePassValidate = changePassValidate;
